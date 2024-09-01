@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS events (
                                       pen_away INTEGER,
                                       rc_home INTEGER,
                                       rc_away INTEGER,
+                                      importance BOOLEAN,
                                       event_status TEXT,
                                       published_status TEXT
 );

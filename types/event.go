@@ -16,6 +16,7 @@ type Event struct {
 	PenAway         int       `db:"pen_away"`         // INTEGER
 	RcHome          int       `db:"rc_home"`          // INTEGER
 	RcAway          int       `db:"rc_away"`          // INTEGER
+	Importance      bool      `db:"importance"`       // BOOLEAN
 	EventStatus     string    `db:"event_status"`     // TEXT
 	PublishedStatus string    `db:"published_status"` // TEXT
 }

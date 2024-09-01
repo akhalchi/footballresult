@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"footballresult/get"
 	"footballresult/storage"
 	"log"
@@ -13,8 +12,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(db)
-
-	get.Matches()
+	get.Matches(db)
 
 }
