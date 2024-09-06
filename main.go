@@ -12,6 +12,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	get.Matches(db)
+	get.Events(db)
 
 }

@@ -31,16 +31,14 @@ func GetMatchesURL(teamID int) string {
 }
 
 func GetTeamMatchesJSON(url string, authToken string) ([]byte, error) {
-	// Создаем запрос
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Устанавливаем заголовок для авторизации
 	req.Header.Set("X-Auth-Token", authToken)
 
-	// Выполняем запрос
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -48,13 +46,11 @@ func GetTeamMatchesJSON(url string, authToken string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	// Читаем ответ
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	// Возвращаем JSON как слайс байтов
 	return body, nil
 }
 
