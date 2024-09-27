@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"footballresult/types"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -58,4 +59,52 @@ func LoadEnvVariable(key string) (string, error) {
 		return "", fmt.Errorf("%s not set in .env file", key)
 	}
 	return value, nil
+}
+
+func GetEventsFromDB(db *sql.DB, query string) ([]types.Event, error) {
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+			fmt.Println("error closing rows:", err)
+		}
+	}(rows)
+
+	var events []types.Event
+
+	for rows.Next() {
+		var event types.Event
+
+		if err := rows.Scan(
+			&event.EventID,
+			&event.EventDate,
+			&event.Tournament,
+			&event.TeamHome,
+			&event.TeamAway,
+			&event.GoalsHome,
+			&event.GoalsAway,
+			&event.PenHome,
+			&event.PenAway,
+			&event.RcHome,
+			&event.RcAway,
+			&event.Importance,
+			&event.EventStatus,
+			&event.PublishedStatus,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+
+		events = append(events, event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %v", err)
+	}
+
+	return events, nil
 }
