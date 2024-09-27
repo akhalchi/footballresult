@@ -1,7 +1,7 @@
 version: '3'
 services:
   db:
-    image: postgres
+    image: postgres:15.3
     restart: always
     volumes:
       - ./init:/docker-entrypoint-initdb.d
@@ -9,6 +9,5 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
-      TZ: ${TIMEZONE}
     ports:
       - "${DB_PORT}:5432"

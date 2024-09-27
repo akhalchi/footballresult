@@ -4,30 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"footballresult/types"
-	"github.com/joho/godotenv"
+	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
 )
 
-func LoadFootballDataToken() string {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-
-	token := os.Getenv("FOOTBALL_DATA_TOKEN")
-	if token == "" {
-		log.Fatalf("FOOTBALL_DATA_TOKEN not set in .env file")
-	}
-
-	return token
+func GetEventsURL(url string, teamID int) string {
+	baseURL := url + "/teams/"
+	return fmt.Sprintf("%s%d/matches", baseURL, teamID)
 }
 
-func GetMatchesURL(teamID int) string {
-	baseURL := "https://api.football-data.org/v4/teams/"
-	return fmt.Sprintf("%s%d/matches", baseURL, teamID)
+func GetOneEventURL(url string, eventID int) string {
+	baseURL := url + "/matches/"
+	return fmt.Sprintf("%s%d", baseURL, eventID)
 }
 
 func GetJSON(url string, authToken string) ([]byte, error) {
@@ -44,7 +33,12 @@ func GetJSON(url string, authToken string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -62,7 +56,10 @@ func FilterTimedEvents(apiResponse []byte) ([]types.Event, error) {
 
 	var events []types.Event
 	for _, match := range response.Matches {
-		if match.Status == "TIMED" {
+		if match.Status == "TIMED" ||
+			match.Status == "IN_PLAY" ||
+			match.Status == "PAUSED" ||
+			match.Status == "SUSPENDED" {
 			event := types.Event{
 				EventID:     match.ID,
 				EventDate:   match.UTCDate,
@@ -98,8 +95,8 @@ func ParseFootballEvent(jsonData []byte) (types.Event, error) {
 		event.GoalsHome = response.Score.RegularTime.HomeTeam + response.Score.ExtraTime.HomeTeam
 		event.GoalsAway = response.Score.RegularTime.AwayTeam + response.Score.ExtraTime.AwayTeam
 	} else {
-		event.GoalsHome = response.Score.RegularTime.HomeTeam
-		event.GoalsAway = response.Score.RegularTime.AwayTeam
+		event.GoalsHome = response.Score.FullTime.Home
+		event.GoalsAway = response.Score.FullTime.Away
 	}
 
 	if response.Score.Duration == "PENALTY_SHOOTOUT" {

@@ -2,35 +2,46 @@ package get
 
 import (
 	"database/sql"
+	"fmt"
 	"footballresult/get/footballdata"
-	"footballresult/types"
-	"log"
+	"footballresult/storage"
+	"github.com/joho/godotenv"
+	"time"
 )
 
 func Events(db *sql.DB) error {
-	token := footballdata.LoadFootballDataToken()
 
-	teamIDs, err := footballdata.GetActiveTeamIDsFromDB(db)
+	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error loading .env file: %v", err)
 	}
 
-	var allParsedEvents []types.Event
-	for _, teamID := range teamIDs {
-
-		url := footballdata.GetMatchesURL(teamID)
-		getJson, _ := footballdata.GetJSON(url, token)
-		teamParsedEvents, _ := footballdata.FilterTimedEvents(getJson)
-		newParsedEvents := footballdata.CompareEvents(allParsedEvents, teamParsedEvents)
-		allParsedEvents = append(allParsedEvents, newParsedEvents...)
-
+	token, err := storage.LoadEnvVariable("FOOTBALL_DATA_TOKEN")
+	if err != nil {
+		return err
 	}
 
-	eventsFromDB, _ := footballdata.GetTimedEventsFromDB(db)
-	newEventsAdd := footballdata.CompareEvents(eventsFromDB, allParsedEvents)
+	url, err := storage.LoadEnvVariable("FOOTBALL_DATA_URL")
+	if err != nil {
+		return err
+	}
 
-	footballdata.InsertEventsInDB(db, newEventsAdd)
+	err = footballdata.GetEvents(db, url, token)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := footballdata.UpdateActiveEvents(db, url, token)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 }

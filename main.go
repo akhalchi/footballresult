@@ -1,17 +1,17 @@
 package main
 
 import (
-	"footballresult/get"
-	"footballresult/storage"
-	"log"
+	"footballresult/send"
 )
 
 func main() {
-	db, err := storage.InitDB()
+	/*db, err := storage.InitDB()
 	if err != nil {
 		log.Fatal(err)
+	} else {
+		fmt.Println(db)
 	}
 
-	get.Events(db)
-
+	get.Events(db) */
+	send.Telegram()
 }
