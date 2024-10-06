@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"footballresult/types"
-	"os"
-
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"os"
+	"time"
 )
 
 func InitDB() (*sql.DB, error) {
@@ -107,4 +107,45 @@ func GetEventsFromDB(db *sql.DB, query string) ([]types.Event, error) {
 	}
 
 	return events, nil
+}
+
+func InsertLog(db *sql.DB, action, status, details string) error {
+
+	query := `INSERT INTO log (action, status, details) VALUES ($1, $2, $3)`
+
+	_, err := db.Exec(query, action, status, details)
+	if err != nil {
+		return fmt.Errorf("failed to insert log entry: %v", err)
+	}
+
+	return nil
+}
+
+func GetMinutesSinceLastAction(db *sql.DB, action string, status string) (int64, error) {
+
+	query := `
+		SELECT date
+		FROM log
+		WHERE action = $1 AND status = $2
+		ORDER BY date DESC
+		LIMIT 1;
+	`
+
+	var logDate time.Time
+
+	err := db.QueryRow(query, action, status).Scan(&logDate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+
+		return 0, fmt.Errorf("error executing query: %v", err)
+	}
+
+	now := time.Now()
+
+	duration := now.Sub(logDate)
+	minutesSinceLast := int64(duration.Minutes())
+
+	return minutesSinceLast, nil
 }

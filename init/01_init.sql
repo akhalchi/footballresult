@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS log (
                                            date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                                            action TEXT NOT NULL,
                                            status TEXT NOT NULL,
-                                           result TEXT NOT NULL
+                                           details TEXT NOT NULL
 
 );
 
