@@ -122,7 +122,6 @@ func InsertLog(db *sql.DB, action, status, details string) error {
 }
 
 func GetMinutesSinceLastAction(db *sql.DB, action string, status string) (int64, error) {
-
 	query := `
 		SELECT date
 		FROM log
@@ -136,16 +135,42 @@ func GetMinutesSinceLastAction(db *sql.DB, action string, status string) (int64,
 	err := db.QueryRow(query, action, status).Scan(&logDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, nil
+			return 0, fmt.Errorf("no log entries found for action: %s, status: %s", action, status)
 		}
 
 		return 0, fmt.Errorf("error executing query: %v", err)
 	}
 
 	now := time.Now()
-
 	duration := now.Sub(logDate)
 	minutesSinceLast := int64(duration.Minutes())
 
 	return minutesSinceLast, nil
+}
+
+func GetLastActionResult(db *sql.DB, action string) (string, int64, error) {
+	query := `
+		SELECT status, date
+		FROM log
+		WHERE action = $1
+		ORDER BY date DESC
+		LIMIT 1;
+	`
+
+	var status string
+	var logDate time.Time
+
+	err := db.QueryRow(query, action).Scan(&status, &logDate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", 0, fmt.Errorf("no log entries found for action: %s", action)
+		}
+		return "", 0, fmt.Errorf("error executing query: %v", err)
+	}
+
+	now := time.Now()
+	duration := now.Sub(logDate)
+	minutesSinceLast := int64(duration.Minutes())
+
+	return status, minutesSinceLast, nil
 }

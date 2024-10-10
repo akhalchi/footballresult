@@ -2,7 +2,6 @@ package main
 
 import (
 	"footballresult/get"
-	"footballresult/send"
 	"footballresult/storage"
 	"log"
 )
@@ -14,5 +13,5 @@ func main() {
 	}
 
 	get.Events(db)
-	send.Telegram()
+	//send.Telegram()
 }

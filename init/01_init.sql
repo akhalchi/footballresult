@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS teams (
 );
 
 
--- Инициализация таблицы logs
+
 CREATE TABLE IF NOT EXISTS log (
                                            id SERIAL PRIMARY KEY,
                                            date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS log (
 
 );
 
--- Инициализация таблицы events
+
 CREATE TABLE IF NOT EXISTS events (
                                       event_id SERIAL PRIMARY KEY,
                                       event_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS events (
                                       rc_away INTEGER,
                                       importance BOOLEAN,
                                       event_status TEXT,
-                                      published_status TEXT
+                                      published_status TEXT DEFAULT 'PLANNED'
 );
 
 
