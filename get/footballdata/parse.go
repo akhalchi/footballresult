@@ -61,12 +61,13 @@ func FilterTimedEvents(apiResponse []byte) ([]types.Event, error) {
 			match.Status == "PAUSED" ||
 			match.Status == "SUSPENDED" {
 			event := types.Event{
-				EventID:     match.ID,
-				EventDate:   match.UTCDate,
-				Tournament:  match.Tournament.Name,
-				TeamHome:    match.HomeTeam.ShortName,
-				TeamAway:    match.AwayTeam.ShortName,
-				EventStatus: match.Status,
+				EventID:         match.ID,
+				EventDate:       match.UTCDate,
+				Tournament:      match.Tournament.Name,
+				TeamHome:        match.HomeTeam.ShortName,
+				TeamAway:        match.AwayTeam.ShortName,
+				EventStatus:     match.Status,
+				PublishedStatus: "PLANNED",
 			}
 			events = append(events, event)
 		}
@@ -83,12 +84,13 @@ func ParseFootballEvent(jsonData []byte) (types.Event, error) {
 	}
 
 	event := types.Event{
-		EventID:     response.ID,
-		EventDate:   response.UTCDate,
-		Tournament:  response.Tournament.Name,
-		TeamHome:    response.HomeTeam.ShortName,
-		TeamAway:    response.AwayTeam.ShortName,
-		EventStatus: response.Status,
+		EventID:         response.ID,
+		EventDate:       response.UTCDate,
+		Tournament:      response.Tournament.Name,
+		TeamHome:        response.HomeTeam.ShortName,
+		TeamAway:        response.AwayTeam.ShortName,
+		EventStatus:     response.Status,
+		PublishedStatus: "PLANNED",
 	}
 
 	if response.Score.Duration == "EXTRA_TIME" || response.Score.Duration == "PENALTY_SHOOTOUT" {

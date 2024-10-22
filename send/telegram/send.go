@@ -2,38 +2,23 @@ package telegram
 
 import (
 	"fmt"
-	"footballresult/storage"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
 )
 
-func SendMessageToTelegram(message string) error {
-
-	err := godotenv.Load(".env")
-	if err != nil {
-		return fmt.Errorf("error loading .env file: %v", err)
-	}
-
-	botToken, err := storage.LoadEnvVariable("TELEGRAM_BOT_TOKEN")
-	if err != nil {
-		return err
-	}
-
-	channelID, err := storage.LoadEnvVariable("TELEGRAM_CHANNEL_ID")
-	if err != nil {
-		return err
-	}
-
+func SendMessageToTelegram(botToken, channelID, message string) error {
+	// Создаем нового бота с использованием переданного токена
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create bot: %v", err)
 	}
 
+	// Создаем сообщение для отправки в указанный канал
 	msg := tgbotapi.NewMessageToChannel(channelID, message)
 
+	// Отправляем сообщение через API
 	_, err = bot.Send(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send message to telegram: %v", err)
 	}
 
 	return nil
