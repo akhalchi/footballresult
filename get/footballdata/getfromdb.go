@@ -51,7 +51,9 @@ func GetActiveEventsFromDB(db *sql.DB) ([]types.Event, error) {
 	query := `
 		SELECT event_id, event_date, event_tournament, team_home, team_away, goals_home, goals_away, pen_home, pen_away, rc_home, rc_away, importance, event_status, published_status
 		FROM events
-		WHERE event_status NOT IN ('FINISHED', 'PASTRONED', 'CANCELED')
+		WHERE event_status NOT IN ('FINISHED', 'POSTPONED', 'CANCELED')
 		AND event_date < NOW();`
+
 	return storage.GetEventsFromDB(db, query)
+
 }

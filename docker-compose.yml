@@ -2,6 +2,7 @@ version: '3'
 services:
   db:
     image: postgres:15.3
+    container_name: fr_db
     restart: always
     volumes:
       - ./init:/docker-entrypoint-initdb.d
@@ -11,3 +12,13 @@ services:
       POSTGRES_DB: ${DB_NAME}
     ports:
       - "${DB_PORT}:5432"
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./.env:/app/.env
+    command: /app/app
+    container_name: fr_app
+    depends_on:
+      - db

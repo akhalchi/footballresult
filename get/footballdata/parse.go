@@ -66,6 +66,12 @@ func FilterTimedEvents(apiResponse []byte) ([]types.Event, error) {
 				Tournament:      match.Tournament.Name,
 				TeamHome:        match.HomeTeam.ShortName,
 				TeamAway:        match.AwayTeam.ShortName,
+				GoalsHome:       0,
+				GoalsAway:       0,
+				PenHome:         0,
+				PenAway:         0,
+				RcHome:          0,
+				RcAway:          0,
 				EventStatus:     match.Status,
 				PublishedStatus: "PLANNED",
 			}

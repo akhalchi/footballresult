@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"footballresult/config"
-	"footballresult/send/telegram"
+	"footballresult/logger"
 	"footballresult/storage"
 	"footballresult/types"
-	"log"
 	"strconv"
 	"time"
 )
@@ -54,7 +53,7 @@ func AddNewsEvents(db *sql.DB, url, token string) (error error, result string) {
 
 	newEventsAdd := CheckExistEvents(eventsFromDB, allParsedEvents)
 
-	err = storage.InsertUpdateEventsInDB(db, newEventsAdd)
+	err = storage.InsertEvents(db, newEventsAdd)
 	if err != nil {
 		return err, ""
 	}
@@ -76,32 +75,36 @@ func UpdateActiveEvents(db *sql.DB, url, token string) (string, error) {
 	}
 
 	var updatedEvents []types.Event
-	var result string
+	result := "updated events: "
 
-	for _, event := range activeEvents {
-		eventURL := GetOneEventURL(url, int(event.EventID))
-		getJson, err := GetJSON(eventURL, token)
-		if err != nil {
-			return "", fmt.Errorf("failed to get JSON for event %d: %w", event.EventID, err)
+	if len(activeEvents) > 0 {
+		for _, event := range activeEvents {
+			eventURL := GetOneEventURL(url, int(event.EventID))
+			getJson, err := GetJSON(eventURL, token)
+			if err != nil {
+				return "", fmt.Errorf("failed to get JSON for event %d: %w", event.EventID, err)
+			}
+
+			parsedEvent, err := ParseFootballEvent(getJson)
+			if err != nil {
+				return "", fmt.Errorf("failed to parse event %d: %w", event.EventID, err)
+			}
+
+			if !CompareEvents(parsedEvent, event) {
+				updatedEvents = append(updatedEvents, parsedEvent)
+				result = result + parsedEvent.TeamHome + " vs " + parsedEvent.TeamAway + " | "
+
+			}
+
 		}
-
-		parsedEvent, err := ParseFootballEvent(getJson)
-		if err != nil {
-			return "", fmt.Errorf("failed to parse event %d: %w", event.EventID, err)
-		}
-
-		if !CompareEvents(parsedEvent, event) {
-			updatedEvents = append(updatedEvents, parsedEvent)
-
-		}
-
 	}
 
 	if len(updatedEvents) > 0 {
-		if err := storage.InsertUpdateEventsInDB(db, updatedEvents); err != nil {
+		if err := storage.UpdateEvents(db, updatedEvents); err != nil {
 			return "", fmt.Errorf("failed to insert events into DB: %w", err)
 		}
-		result = "updated events " + strconv.Itoa(len(updatedEvents))
+	} else {
+		result = ""
 	}
 
 	return result, nil
@@ -169,24 +172,14 @@ func Start(db *sql.DB) {
 
 	token := config.Load.FootballDataToken
 	url := config.Load.FootballDataURL
-	botToken := config.Load.TelegramBotToken
-	logChannelID := config.Load.TelegramLogChannelID
 
-	log.Printf("parser is starting...")
-	err := telegram.SendMessageToTelegram(botToken, logChannelID, "Parser is starting...")
-	if err != nil {
-		log.Printf("ERROR: %v", err)
-	}
+	logger.Send("parser is starting...")
 
 	err, result := eventsProcessing(db, url, token)
 	if err != nil {
-		log.Printf("ERROR: %v", err)
+		logger.Send(err.Error())
 	} else if result != "" {
-		log.Printf(result)
-		err := telegram.SendMessageToTelegram(botToken, logChannelID, result)
-		if err != nil {
-			log.Printf("ERROR: %v", err)
-		}
+		logger.Send(result)
 	}
 
 	ticker := time.NewTicker(1 * time.Minute)
@@ -197,23 +190,14 @@ func Start(db *sql.DB) {
 		case <-ticker.C:
 			err, result := eventsProcessing(db, url, token)
 			if err != nil {
-				log.Printf("ERROR: %v", err)
+				logger.Send(err.Error())
 			} else if result != "" {
-				log.Printf(result)
-				err := telegram.SendMessageToTelegram(botToken, logChannelID, result)
-				if err != nil {
-					log.Printf("ERROR: %v", err)
-				}
+				logger.Send(result)
 				i = 0
 			} else {
 				i = i + 1
 				if i > 60 {
-					result = "no updated events for last hour"
-					log.Printf(result)
-					err := telegram.SendMessageToTelegram(botToken, logChannelID, result)
-					if err != nil {
-						log.Printf("ERROR: %v", err)
-					}
+					logger.Send("no updated events for the last hour")
 					i = 0
 				}
 			}

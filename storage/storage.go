@@ -35,6 +35,7 @@ func GetEventsFromDB(db *sql.DB, query string) ([]types.Event, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
+
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
@@ -116,145 +117,78 @@ func GetLastActionResult(db *sql.DB, action string) (string, int64, error) {
 	return status, minutesSinceLast, nil
 }
 
-func InsertUpdateEventsInDB(db *sql.DB, events []types.Event) error {
+func InsertEvents(db *sql.DB, events []types.Event) error {
+	query := `
+		INSERT INTO events (event_id, event_date, event_tournament, team_home, team_away, goals_home, goals_away, pen_home, pen_away, rc_home, rc_away, importance, event_status, published_status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		ON CONFLICT (event_id) DO NOTHING; -- Конфликты игнорируем, если запись уже существует
+	`
 
 	for _, event := range events {
-		query := "INSERT" + " INTO events (event_id"
-		values := "VALUES ($1"
-		params := []interface{}{event.EventID}
-		paramIdx := 2
-
-		// Динамически добавляем только непустые или значимые поля в запрос
-		if !event.EventDate.IsZero() {
-			query += ", event_date"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.EventDate)
-			paramIdx++
-		}
-		if event.Tournament != "" {
-			query += ", event_tournament"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.Tournament)
-			paramIdx++
-		}
-		if event.TeamHome != "" {
-			query += ", team_home"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.TeamHome)
-			paramIdx++
-		}
-		if event.TeamAway != "" {
-			query += ", team_away"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.TeamAway)
-			paramIdx++
-		}
-		if event.GoalsHome != 0 {
-			query += ", goals_home"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.GoalsHome)
-			paramIdx++
-		}
-		if event.GoalsAway != 0 {
-			query += ", goals_away"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.GoalsAway)
-			paramIdx++
-		}
-		if event.PenHome != 0 {
-			query += ", pen_home"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.PenHome)
-			paramIdx++
-		}
-		if event.PenAway != 0 {
-			query += ", pen_away"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.PenAway)
-			paramIdx++
-		}
-		if event.RcHome != 0 {
-			query += ", rc_home"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.RcHome)
-			paramIdx++
-		}
-		if event.RcAway != 0 {
-			query += ", rc_away"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.RcAway)
-			paramIdx++
-		}
-		// Importance - булевое поле, его всегда добавляем
-		query += "," + " importance"
-		values += fmt.Sprintf(", $%d", paramIdx)
-		params = append(params, event.Importance)
-		paramIdx++
-
-		if event.EventStatus != "" {
-			query += ", event_status"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.EventStatus)
-			paramIdx++
-		}
-		if event.PublishedStatus != "" {
-			query += ", published_status"
-			values += fmt.Sprintf(", $%d", paramIdx)
-			params = append(params, event.PublishedStatus)
-			paramIdx++
-		}
-
-		query += ") " + values + ") ON CONFLICT (event_id) DO UPDATE SET "
-
-		// Динамически добавляем только непустые поля в часть SET
-		updateFields := ""
-		if !event.EventDate.IsZero() {
-			updateFields += "event_date = EXCLUDED.event_date, "
-		}
-		if event.Tournament != "" {
-			updateFields += "event_tournament = EXCLUDED.event_tournament, "
-		}
-		if event.TeamHome != "" {
-			updateFields += "team_home = EXCLUDED.team_home, "
-		}
-		if event.TeamAway != "" {
-			updateFields += "team_away = EXCLUDED.team_away, "
-		}
-		if event.GoalsHome != 0 {
-			updateFields += "goals_home = EXCLUDED.goals_home, "
-		}
-		if event.GoalsAway != 0 {
-			updateFields += "goals_away = EXCLUDED.goals_away, "
-		}
-		if event.PenHome != 0 {
-			updateFields += "pen_home = EXCLUDED.pen_home, "
-		}
-		if event.PenAway != 0 {
-			updateFields += "pen_away = EXCLUDED.pen_away, "
-		}
-		if event.RcHome != 0 {
-			updateFields += "rc_home = EXCLUDED.rc_home, "
-		}
-		if event.RcAway != 0 {
-			updateFields += "rc_away = EXCLUDED.rc_away, "
-		}
-		updateFields += "importance = EXCLUDED.importance, " // always update importance
-		if event.EventStatus != "" {
-			updateFields += "event_status = EXCLUDED.event_status, "
-		}
-		if event.PublishedStatus != "" {
-			updateFields += "published_status = EXCLUDED.published_status, "
-		}
-
-		// Удаляем последнюю запятую и пробел
-		if len(updateFields) > 0 {
-			query += updateFields[:len(updateFields)-2]
-		}
-
-		// Выполнение запроса
-		_, err := db.Exec(query, params...)
+		_, err := db.Exec(query,
+			event.EventID,
+			event.EventDate,
+			event.Tournament,
+			event.TeamHome,
+			event.TeamAway,
+			event.GoalsHome,
+			event.GoalsAway,
+			event.PenHome,
+			event.PenAway,
+			event.RcHome,
+			event.RcAway,
+			event.Importance,
+			event.EventStatus,
+			event.PublishedStatus,
+		)
 		if err != nil {
-			return fmt.Errorf("failed to insert/update event %d: %v", event.EventID, err)
+			return fmt.Errorf("failed to insert event %d: %v", event.EventID, err)
+		}
+	}
+
+	return nil
+}
+
+func UpdateEvents(db *sql.DB, events []types.Event) error {
+	// SQL-запрос для обновления всех полей
+	query := `
+		UPDATE events
+		SET event_date = $2,
+			event_tournament = $3,
+			team_home = $4,
+			team_away = $5,
+			goals_home = $6,
+			goals_away = $7,
+			pen_home = $8,
+			pen_away = $9,
+			rc_home = $10,
+			rc_away = $11,
+			importance = $12,
+			event_status = $13,
+			published_status = $14
+		WHERE event_id = $1;
+	`
+
+	for _, event := range events {
+		// Выполнение SQL-запроса с передачей всех значений из структуры
+		_, err := db.Exec(query,
+			event.EventID,         // $1
+			event.EventDate,       // $2
+			event.Tournament,      // $3
+			event.TeamHome,        // $4
+			event.TeamAway,        // $5
+			event.GoalsHome,       // $6
+			event.GoalsAway,       // $7
+			event.PenHome,         // $8
+			event.PenAway,         // $9
+			event.RcHome,          // $10
+			event.RcAway,          // $11
+			event.Importance,      // $12
+			event.EventStatus,     // $13
+			event.PublishedStatus, // $14
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update event %d: %v", event.EventID, err)
 		}
 	}
 

@@ -25,52 +25,49 @@ func SendProcessing(db *sql.DB) (string, error) {
 	botToken := config.Load.TelegramBotToken
 	channelID := config.Load.TelegramChannelID
 
-	// Получаем завершенные события из БД
 	finishedEvents, err := GetFinishedEventsFromDB(db)
 	if err != nil {
 		return "", err
 	}
 
-	var updateFinishedEvents []types.Event
 	var result string
 
 	if len(finishedEvents) > 0 {
+		result = "events: "
+		var updateFinishedEvents []types.Event
+
 		for _, event := range finishedEvents {
-			// Проверяем, не истекло ли событие
+
 			if !eventExpired(event.EventDate) {
-				// Формируем сообщение
 				message := event.TeamHome + " " + strconv.Itoa(event.GoalsHome) + " - " + strconv.Itoa(event.GoalsAway) + " " + event.TeamAway + "\n" + event.Tournament + "\n"
 
-				// Отправляем сообщение в Telegram
+				if event.PenHome != 0 || event.PenAway != 0 {
+					message = message + "Penalties: " + strconv.Itoa(event.PenHome) + ":" + strconv.Itoa(event.PenAway)
+				}
+
 				err = SendMessageToTelegram(botToken, channelID, message)
 				if err != nil {
 					return "", err
 				}
-				result = "event sent to telegram: " + strconv.FormatInt(event.EventID, 10)
 
-				// Если отправка успешна, обновляем статус события
-				updateFinishedEvents = append(updateFinishedEvents, types.Event{
-					EventID:         event.EventID,
-					PublishedStatus: "SENT",
-				})
+				result = result + "sent - " + event.TeamHome + " vs " + event.TeamAway + " | "
+				event.PublishedStatus = "SENT"
+
 			} else {
-				// Если событие истекло, обновляем статус как "EXPIRED"
-				updateFinishedEvents = append(updateFinishedEvents, types.Event{
-					EventID:         event.EventID,
-					PublishedStatus: "EXPIRED",
-				})
-				result = "event expired: " + strconv.FormatInt(event.EventID, 10)
+
+				result = result + "expired - " + event.TeamHome + " vs " + event.TeamAway + " | "
+				event.PublishedStatus = "EXPIRED"
+
 			}
+			updateFinishedEvents = append(updateFinishedEvents, event)
 
 		}
 
-		// Вставляем обновленные данные в БД
-		err = storage.InsertUpdateEventsInDB(db, updateFinishedEvents)
+		err = storage.UpdateEvents(db, updateFinishedEvents)
 		if err != nil {
 			return "", fmt.Errorf("failed to update events in DB: %v", err)
 		}
 	}
 
-	// Возвращаем результат
 	return result, nil
 }
