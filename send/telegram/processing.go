@@ -7,6 +7,7 @@ import (
 	"footballresult/storage"
 	"footballresult/types"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -18,6 +19,24 @@ func eventExpired(eventDate time.Time) bool {
 
 	return duration > 4*time.Hour
 
+}
+
+func GetLeagueEmoji(league string) string {
+	// Приводим строку к нижнему регистру для удобного сравнения
+	league = strings.ToLower(league)
+
+	// Карта соответствий чемпионатов и эмодзи
+	emojis := map[string]string{
+		"serie a":          "🇮🇹",
+		"premier league":   "🏴󠁧󠁢󠁥󠁮󠁧󠁿", // Флаг Англии
+		"primera division": "🇪🇸",
+	}
+
+	// Если чемпионат найден — возвращаем эмодзи, иначе 🏆
+	if emoji, found := emojis[league]; found {
+		return emoji
+	}
+	return "🏆"
 }
 
 func SendProcessing(db *sql.DB) (string, error) {
@@ -39,10 +58,14 @@ func SendProcessing(db *sql.DB) (string, error) {
 		for _, event := range finishedEvents {
 
 			if !eventExpired(event.EventDate) {
-				message := event.TeamHome + " " + strconv.Itoa(event.GoalsHome) + " - " + strconv.Itoa(event.GoalsAway) + " " + event.TeamAway + "\n" + event.Tournament + "\n"
+				emoji := GetLeagueEmoji(event.Tournament)
+				score := "⚽️" + " <b>" + event.TeamHome + "</b> " + strconv.Itoa(event.GoalsHome) + " - " + strconv.Itoa(event.GoalsAway) + " <b>" + event.TeamAway + "</b> \n"
+				tournament := emoji + " <b>" + event.Tournament + "</b> \n"
+				message := score + tournament
 
 				if event.PenHome != 0 || event.PenAway != 0 {
-					message = message + "Penalties: " + strconv.Itoa(event.PenHome) + ":" + strconv.Itoa(event.PenAway)
+					penalties := message + "🥅 <b>Penalties:</b> " + strconv.Itoa(event.PenHome) + ":" + strconv.Itoa(event.PenAway) + "\n"
+					message = score + penalties + tournament
 				}
 
 				err = SendMessageToTelegram(botToken, channelID, message)

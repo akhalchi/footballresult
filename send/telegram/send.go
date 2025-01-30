@@ -14,6 +14,7 @@ func SendMessageToTelegram(botToken, channelID, message string) error {
 
 	// Создаем сообщение для отправки в указанный канал
 	msg := tgbotapi.NewMessageToChannel(channelID, message)
+	msg.ParseMode = "HTML"
 
 	// Отправляем сообщение через API
 	_, err = bot.Send(msg)
